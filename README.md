@@ -13,11 +13,8 @@ random deals run as fast as sequential ones.
 ## Expectations
 
 This code is provided for free as part of a project I did with Claude
-for fun. I don't have a desire to provide long-term support for any of
-this work. I am relying on others to take this and run with it: fork it,
-build it into products, polish and package it into libraries, and create
-amazing tools for the poker community. Or, take the ideas and tooling
-and apply them in new areas.
+for fun. I can't promise support for any of this work. If you find a
+correctness bug in the circuits or generated code, please reach out.
 
 ## Quick start
 
