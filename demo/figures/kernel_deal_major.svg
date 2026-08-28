@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 458" role="img"
+     aria-label="Deal-major kernel: one thread pairs one villain draw with 32 boards in bit-lanes and runs the hand-rank circuit twice"
+     font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">
+  <title>Deal-major kernel (equity_holdem.wgsl)</title>
+  <defs>
+    <marker id="arrA" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L8 4 L0 8 z" fill="#2b3038"/>
+    </marker>
+  </defs>
+  <rect width="780" height="458" fill="#ffffff"/>
+
+  <!-- header -->
+  <text x="16" y="30" fill="#2b3038"><tspan font-size="15" font-weight="600">Deal-major kernel</tspan><tspan dx="10" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11" fill="#69727f">equity_holdem.wgsl</tspan></text>
+  <text x="16" y="48" font-size="11.5" fill="#69727f">hero hand known -- each thread pairs one villain draw with 32 candidate runouts</text>
+  <text x="764" y="30" text-anchor="end" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10" fill="#69727f">grid: nvillains x ceil(nboards / 32) threads</text>
+
+  <!-- storage buffers -->
+  <text x="16" y="86" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11.5" fill="#2b3038">boards[]</text>
+  <g fill="#f2f4f7" stroke="#a5adb8" stroke-width="1">
+    <rect x="16" y="92" width="110" height="10"/>
+    <rect x="16" y="105" width="110" height="10"/>
+    <rect x="16" y="118" width="110" height="10"/>
+    <rect x="16" y="131" width="110" height="10"/>
+    <rect x="16" y="144" width="110" height="10"/>
+  </g>
+  <text x="71" y="168" text-anchor="middle" font-size="9.5" fill="#69727f">32 entries / thread</text>
+
+  <text x="16" y="216" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11.5" fill="#2b3038">villains[]</text>
+  <g fill="#f6e3d7" stroke="#b06239" stroke-width="1">
+    <rect x="16" y="222" width="110" height="10"/>
+    <rect x="16" y="235" width="110" height="10"/>
+    <rect x="16" y="248" width="110" height="10"/>
+    <rect x="16" y="261" width="110" height="10"/>
+    <rect x="16" y="274" width="110" height="10"/>
+  </g>
+  <text x="71" y="298" text-anchor="middle" font-size="9.5" fill="#69727f">1 entry / thread</text>
+
+  <!-- invocation frame -->
+  <rect x="150" y="62" width="614" height="300" rx="10" fill="none" stroke="#98a1ad" stroke-width="1.2" stroke-dasharray="6 4"/>
+  <text x="162" y="82" font-size="10" font-weight="600" letter-spacing="0.06em" fill="#69727f">ONE INVOCATION (THREAD)</text>
+
+  <!-- arrows from buffers -->
+  <path d="M126 123 H146 V196 H162" fill="none" stroke="#2b3038" stroke-width="1.3" marker-end="url(#arrA)"/>
+  <path d="M126 253 H158 V328 H262" fill="none" stroke="#2b3038" stroke-width="1.3" marker-end="url(#arrA)"/>
+
+  <!-- board load + transpose -->
+  <rect x="166" y="175" width="132" height="68" rx="6" fill="#f2f4f7" stroke="#a5adb8" stroke-width="1"/>
+  <text x="232" y="196" text-anchor="middle" font-size="11.5" fill="#2b3038">32 boards -&gt; lanes</text>
+  <text x="232" y="212" text-anchor="middle" font-size="10" fill="#69727f">transpose -&gt; planes</text>
+  <rect x="178" y="222" width="108" height="13" fill="#ffffff" stroke="#c9cfd8" stroke-width="1"/>
+  <g stroke="#c9cfd8" stroke-width="1">
+    <line x1="205" y1="222" x2="205" y2="235"/>
+    <line x1="232" y1="222" x2="232" y2="235"/>
+    <line x1="259" y1="222" x2="259" y2="235"/>
+  </g>
+
+  <!-- fan to the two evals -->
+  <path d="M298 196 H314 V150 H317" fill="none" stroke="#2b3038" stroke-width="1.3" marker-end="url(#arrA)"/>
+  <path d="M298 222 H314 V268 H317" fill="none" stroke="#2b3038" stroke-width="1.3" marker-end="url(#arrA)"/>
+
+  <!-- OR joins -->
+  <circle cx="332" cy="150" r="11" fill="#ffffff" stroke="#2b3038" stroke-width="1.2"/>
+  <text x="332" y="153.5" text-anchor="middle" font-size="9" font-weight="600" fill="#2b3038">OR</text>
+  <circle cx="332" cy="268" r="11" fill="#ffffff" stroke="#2b3038" stroke-width="1.2"/>
+  <text x="332" y="271.5" text-anchor="middle" font-size="9" font-weight="600" fill="#2b3038">OR</text>
+
+  <!-- uniform inputs -->
+  <rect x="270" y="94" width="124" height="20" rx="4" fill="#dce9f6" stroke="#4a7ab0" stroke-width="1"/>
+  <text x="332" y="107.5" text-anchor="middle" font-size="10" fill="#2b3038">hero + revealed board</text>
+  <path d="M332 114 V135" fill="none" stroke="#2b3038" stroke-width="1.3" marker-end="url(#arrA)"/>
+
+  <rect x="270" y="318" width="124" height="20" rx="4" fill="#f6e3d7" stroke="#b06239" stroke-width="1"/>
+  <text x="332" y="331.5" text-anchor="middle" font-size="10" fill="#2b3038">villain draw (entry v)</text>
+  <path d="M332 318 V283" fill="none" stroke="#2b3038" stroke-width="1.3" marker-end="url(#arrA)"/>
+
+  <!-- circuit evals -->
+  <path d="M343 150 H360" fill="none" stroke="#2b3038" stroke-width="1.3" marker-end="url(#arrA)"/>
+  <path d="M343 268 H360" fill="none" stroke="#2b3038" stroke-width="1.3" marker-end="url(#arrA)"/>
+  <rect x="364" y="128" width="150" height="44" rx="6" fill="#fdeecb" stroke="#c9992e" stroke-width="1.6"/>
+  <text x="439" y="146" text-anchor="middle" font-size="12" font-weight="600" fill="#2b3038">hand-rank circuit</text>
+  <text x="439" y="161" text-anchor="middle" font-size="9.5" fill="#69727f">1,192 gates, bitsliced x 32</text>
+  <rect x="364" y="246" width="150" height="44" rx="6" fill="#fdeecb" stroke="#c9992e" stroke-width="1.6"/>
+  <text x="439" y="264" text-anchor="middle" font-size="12" font-weight="600" fill="#2b3038">hand-rank circuit</text>
+  <text x="439" y="279" text-anchor="middle" font-size="9.5" fill="#69727f">1,192 gates, bitsliced x 32</text>
+
+  <!-- value planes -->
+  <path d="M514 150 H526" fill="none" stroke="#2b3038" stroke-width="1.3" marker-end="url(#arrA)"/>
+  <path d="M514 268 H526" fill="none" stroke="#2b3038" stroke-width="1.3" marker-end="url(#arrA)"/>
+  <rect x="530" y="132" width="92" height="36" rx="5" fill="#dce9f6" stroke="#4a7ab0" stroke-width="1"/>
+  <text x="576" y="154" text-anchor="middle" font-size="10" fill="#2b3038">24 value planes</text>
+  <rect x="530" y="250" width="92" height="36" rx="5" fill="#f6e3d7" stroke="#b06239" stroke-width="1"/>
+  <text x="576" y="272" text-anchor="middle" font-size="10" fill="#2b3038">24 value planes</text>
+
+  <!-- compare + tally -->
+  <path d="M622 150 H636 V200 H646" fill="none" stroke="#2b3038" stroke-width="1.3" marker-end="url(#arrA)"/>
+  <path d="M622 268 H636 V218 H646" fill="none" stroke="#2b3038" stroke-width="1.3" marker-end="url(#arrA)"/>
+  <rect x="650" y="185" width="100" height="48" rx="6" fill="#f2f4f7" stroke="#a5adb8" stroke-width="1"/>
+  <text x="700" y="204" text-anchor="middle" font-size="12" font-weight="600" fill="#2b3038">cmp24</text>
+  <text x="700" y="219" text-anchor="middle" font-size="9.5" fill="#69727f">gt / eq lanes</text>
+  <path d="M700 233 V254" fill="none" stroke="#2b3038" stroke-width="1.3" marker-end="url(#arrA)"/>
+  <rect x="650" y="258" width="100" height="26" rx="5" fill="#f2f4f7" stroke="#a5adb8" stroke-width="1"/>
+  <text x="700" y="275" text-anchor="middle" font-size="10.5" fill="#2b3038">popcount + valid</text>
+  <path d="M700 284 V374" fill="none" stroke="#2b3038" stroke-width="1.3" marker-end="url(#arrA)"/>
+  <text x="706" y="332" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9.5" fill="#69727f">atomicAdd</text>
+  <rect x="616" y="378" width="148" height="44" rx="6" fill="#e6efe6" stroke="#5d8462" stroke-width="1.2"/>
+  <text x="690" y="396" text-anchor="middle" font-size="11" font-weight="600" fill="#2b3038">tally: win / tie / deals</text>
+  <text x="690" y="411" text-anchor="middle" font-size="9.5" fill="#69727f">u64 pairs in storage</text>
+
+  <!-- takeaway -->
+  <text x="16" y="436" font-size="11.5" fill="#2b3038">Per thread: two circuit evals score up to 32 deals -- the hero hand re-runs for every villain draw.</text>
+  <text x="16" y="452" font-size="10.5" fill="#69727f">default route for postflop spots (under ~32k runouts); colliding lanes are knocked out of valid before the tally.</text>
+</svg>

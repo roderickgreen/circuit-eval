@@ -1,0 +1,523 @@
+:root {
+  --bg: #12151a;
+  --panel: #1c2129;
+  --edge: #2c3442;
+  --text: #d8dee8;
+  --dim: #8a93a3;
+  --accent: #4da3ff;
+  --felt: #1e6b46;
+  --felt-dark: #14492f;
+  --gold: #ffd97a;      /* equity chips, showdown verdict */
+  --villain: #c95c66;   /* results panel: villain share */
+  --tie: #4a5468;       /* results panel: ties / split */
+  --nolow: #262d3a;     /* results panel: bar track + no-low hatch base */
+
+  /* card faces, by suit, plus the two stripes of a face-down back. */
+  --spades: #33363f;
+  --hearts: #b8352e;
+  --diams: #2563c0;
+  --clubs: #237b3f;
+  --back: #24427a;
+  --back-alt: #2d5194;
+
+  --warn: #e0a25c;      /* partial / stopped results */
+
+  /* one knob for card scale: seats hold up to 8 of these side by side, so
+     they track the viewport on a phone and settle at a fixed size on a
+     laptop (7.4vw hits the 2.4rem ceiling at ~520px wide) */
+  --cw: clamp(1.8rem, 7.4vw, 2.4rem);
+  --ch: calc(var(--cw) * 1.42);
+  --cgap: 0.3rem;
+
+  /* the felt stops growing here, and nothing else on the page has any reason
+     to be wider than the thing it describes — so every band gets the same
+     ceiling and the same gutter, and the whole page is one centred column */
+  --table-w: 680px;
+  --pad: 1rem;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; } /* our display:flex on labels would otherwise beat the UA hidden rule */
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+/* the header is static markup in index.html; the React root joins the same
+   column so `main` still gets the leftover height */
+#root {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* every top-level band shares the column: same ceiling, same gutter, so the
+   brand, the controls, the felt and the results all line up on one edge */
+header, #controls, main {
+  width: 100%;
+  max-width: calc(var(--table-w) + 2 * var(--pad));
+  margin-inline: auto;
+}
+
+header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding: 0.9rem var(--pad) 0.4rem;
+}
+#brand { display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; }
+#brand h1 { margin: 0; font-size: 1.4rem; letter-spacing: 0.02em; }
+#brand .sub { color: var(--dim); font-size: 0.85rem; }
+
+#links { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.55rem; font-size: 0.85rem; }
+#links a { color: var(--accent); text-decoration: none; }
+#links a:hover, #links a:focus-visible { text-decoration: underline; }
+
+#gpuBanner {
+  width: min(100% - 2 * var(--pad), var(--table-w));
+  margin: 0.4rem auto;
+  padding: 0.7rem 0.9rem;
+  border-radius: 10px;
+  background: rgba(224,87,95,0.1);
+  border: 1px solid rgba(224,87,95,0.4);
+  font-size: 0.88rem;
+  text-align: center;
+}
+
+button {
+  font: inherit;
+  color: var(--text);
+  background: #263041;
+  border: 1px solid var(--edge);
+  border-radius: 8px;
+  padding: 0.45rem 1rem;
+  cursor: pointer;
+}
+button:hover:not(:disabled) { background: #2f3c52; border-color: var(--accent); }
+button:disabled { opacity: 0.45; cursor: default; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+#controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.5rem;
+  padding: 0.4rem var(--pad) 0.2rem;
+  align-items: center;
+}
+#controls label { color: var(--dim); font-size: 0.85rem; display: flex; gap: 0.5rem; align-items: center; }
+#himodeWrap { cursor: pointer; }
+#himode { accent-color: var(--accent); width: 1rem; height: 1rem; cursor: pointer; }
+select {
+  font: inherit;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--edge);
+  border-radius: 6px;
+  padding: 0.3rem 0.5rem;
+}
+
+/* ---- layout: felt, then the answer under it, then the hint. Always this
+   order at every width — the results panel is the payoff, and parking it
+   beside the table on a wide screen only bought back space the page had
+   stopped needing. ---- */
+main {
+  flex: 1;
+  padding: 0.4rem var(--pad) 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+#tableCol { width: 100%; min-width: 0; display: flex; flex-direction: column; align-items: center; }
+#resultCol { width: 100%; min-width: 0; }
+
+#table {
+  position: relative; /* the reset button pins to the top-left corner */
+  width: min(var(--table-w), 100%);
+  border-radius: 50% / 42%;
+  background: radial-gradient(ellipse at 50% 40%, var(--felt), var(--felt-dark) 78%);
+  border: 9px solid #3a2d20;
+  box-shadow: inset 0 0 40px rgba(0,0,0,0.45), 0 6px 24px rgba(0,0,0,0.5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1.1rem 1.5rem;
+}
+.seat { display: flex; flex-direction: column; align-items: center; gap: 0.3rem; }
+/* One printed line per seat: the name is the noun, the verbs beside it are
+   set smaller and letterspaced so they read as a legend rather than a
+   continuation of the name. The gap is also the clearance between two
+   .felt-btn hit areas — see below. */
+.who { font-size: 0.82rem; color: #cfe8da; display: flex; align-items: center; gap: 0.7rem; }
+.eq {
+  /* one full line box, reserved whether or not there's a number in it: the
+     old 1.2em was shorter than the 1.45 line-height the text actually
+     occupies, so both seats grew a few px the moment a solve landed and
+     nudged the table */
+  min-height: 1.45em;
+  white-space: nowrap;
+  font-size: 0.9rem;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: baseline;
+  gap: 0.3rem;
+}
+.eq .cap { font-size: 0.68rem; color: rgba(255,217,122,0.6); letter-spacing: 0.06em; text-transform: uppercase; }
+
+/* the board's buttons ride beside it instead of taking a row of their own —
+   vertical space is the scarce thing on a phone. The two 1fr columns are
+   equal whatever the labels say, so the board stays centred on the felt:
+   clear on the run-it-back side, deal on the run-it-forward one. */
+#community {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 0.7rem;
+}
+#clearBoardBtn { justify-self: end; }
+#streetBtn { justify-self: start; }
+
+.cards { display: flex; gap: var(--cgap); min-height: var(--ch); }
+/* inverted faces: suit-colored ground, white rank + icon */
+.card {
+  width: var(--cw);
+  height: var(--ch);
+  border-radius: 6px;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  line-height: 1.05;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+  user-select: none;
+  flex: none;
+}
+.card .rank { font-size: calc(var(--cw) * 0.48); }
+.card .suit { font-size: calc(var(--cw) * 0.44); }
+.card.spades { background: var(--spades); }
+.card.hearts { background: var(--hearts); }
+.card.diams  { background: var(--diams); }
+.card.clubs  { background: var(--clubs); }
+.card.slot {
+  background: rgba(255,255,255,0.07);
+  border: 1.5px dashed rgba(255,255,255,0.25);
+  box-shadow: none;
+}
+.card.back {
+  background: repeating-linear-gradient(135deg, var(--back) 0 5px, var(--back-alt) 5px 10px);
+  border: 2px solid rgba(223,230,242,0.8);
+}
+.card.clickable { cursor: pointer; }
+.card.clickable:hover { outline: 2px solid var(--accent); outline-offset: 1px; }
+.card.clickable:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+#hint {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--dim);
+  text-align: center;
+  max-width: 34rem; /* a measure, not a column — this one stays narrow */
+}
+
+#picker {
+  position: fixed;
+  z-index: 10;
+  width: min(96vw, 27rem);
+  display: grid;
+  grid-template-columns: repeat(13, minmax(0, 1fr));
+  gap: 0.2rem;
+  background: var(--panel);
+  border: 1px solid var(--edge);
+  border-radius: 10px;
+  padding: 0.5rem;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.55);
+}
+.card.mini {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 5 / 7;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.card.mini .rank { font-size: 0.78rem; }
+.card.mini .suit { font-size: 0.66rem; }
+.card.mini:hover:not(.used) { outline: 2px solid var(--accent); }
+.card.mini.used { opacity: 0.22; cursor: default; }
+
+/* Controls that live on the felt are printed into it, not placed on it: no
+   fill, no border, no radius, just matte type in the felt's own ink, the way
+   a real table wears its legends. As chips they were app chrome on a
+   physical surface, and six of them crowded the same centre column as the
+   cards and the equity numbers.
+   #resetBtn is the one object left, which makes the grammar a rule: printed
+   acts on the part of the table it sits on, the disc acts on all of it.
+   Only the *hit area* is thumb-sized — the type stays small enough to read
+   as a legend. The horizontal bleed is half the gap between neighbours, so
+   adjacent targets touch but never overlap. */
+.felt-btn {
+  position: relative;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  padding: 0.15rem 0.1rem;
+  min-height: 1.8rem;
+  font-size: 0.64rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  /* 0.92 alpha over the lightest point of the felt gradient is 4.54:1, and
+     the gradient only darkens outward from there */
+  color: rgba(207, 232, 218, 0.92);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.felt-btn::after { content: ""; position: absolute; inset: -6px -5px; }
+.felt-btn:hover:not(:disabled), .felt-btn:focus-visible {
+  color: #fff;
+  background: none;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.4em;
+  text-decoration-color: rgba(255, 255, 255, 0.5);
+}
+/* the global 0.45 opacity would take printed type off the felt entirely */
+.felt-btn:disabled { opacity: 1; color: rgba(207, 232, 218, 0.34); }
+
+/* Reset is the one control on the table that stays an object, because it acts
+   on the whole table rather than a part of it — a disc lying on the felt, in
+   the dealer-button tradition. It carries its own chrome now that .felt-btn
+   carries none. */
+#resetBtn {
+  position: absolute;
+  top: 0.3rem;
+  left: 0.3rem;
+  z-index: 1;
+  width: 1.9rem;
+  height: 1.9rem;
+  padding: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  /* opaque enough to read against both the felt and, where the oval curves
+     away from this corner on wide screens, the page behind it */
+  background: rgba(0,0,0,0.5);
+  border-color: rgba(255,255,255,0.14);
+  color: #cfe8da;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+#resetBtn:hover { background: rgba(0,0,0,0.62); border-color: var(--accent); }
+#resetBtn svg { width: 1.05rem; height: 1.05rem; display: block; }
+
+#eqStatus {
+  color: var(--dim);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  padding-top: 0.6rem;
+  min-height: 1.2em;
+  text-align: center;
+}
+
+/* ---- equity results panel: one component, states pending / running /
+   paused / stopped / done ---- */
+#eqPanel {
+  background: var(--panel);
+  border: 1px solid var(--edge);
+  border-radius: 10px;
+  padding: 0.85rem 1rem 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  font-variant-numeric: tabular-nums;
+  min-height: 8.5rem;
+  justify-content: center;
+}
+#eqPanel.empty { color: var(--dim); font-size: 0.85rem; text-align: center; }
+/* the churned half of the panel; the meta row below it holds the controls,
+   whose nodes have to outlive a progress tick */
+#eqBody { display: flex; flex-direction: column; gap: 0.65rem; }
+#eqBody:empty { display: none; }
+/* wraps within itself rather than against its neighbours; still a flex box of
+   .mi siblings, so the separator rule below is unaffected */
+#eqFacts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.45rem 0.55rem;
+  flex: 1;
+  min-width: 0;
+}
+.eqbar { display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: var(--nolow); }
+.eqbar.thin { height: 7px; border-radius: 4px; }
+.seg-win  { background: var(--accent); }
+.seg-tie  { background: var(--tie); }
+.seg-loss { background: var(--villain); }
+.seg-nolow {
+  background: repeating-linear-gradient(135deg, #39415260 0 4px, #4c556880 4px 8px);
+}
+.eqbar .fill {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(90deg, var(--tie), #6c7684);
+  transition: width 0.2s linear;
+}
+.eqbar .fill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.22), transparent);
+  animation: sweep 1.6s linear infinite;
+}
+.eqbar.paused .fill::after { animation: none; }
+@keyframes sweep { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) {
+  .eqbar .fill::after { animation: none; }
+  .eqbar .fill { transition: none; }
+}
+
+.eqcells { display: flex; gap: 1rem; }
+.eqcell { flex: 1; min-width: 0; }
+.eqcell .lbl { display: flex; align-items: baseline; gap: 0.4rem; font-size: 0.78rem; color: var(--dim); }
+.eqcell .dot { width: 8px; height: 8px; border-radius: 2px; align-self: center; flex: none; }
+.eqcell .pct { font-size: 1.15rem; font-weight: 600; }
+/* wraps rather than truncates: in the narrow results column the quarter-pot
+   count is wider than its cell, and an ellipsised number is worse than two
+   lines */
+.eqcell .n { font-size: 0.74rem; color: var(--dim); }
+.eqcell.right { text-align: right; }
+.eqcell.right .lbl { justify-content: flex-end; }
+
+/* showdown: an outcome, not a distribution. --tie is a bar colour and far too
+   dark to read as text, so a split reads in the body colour instead. */
+.sdverdict { font-size: 1.3rem; font-weight: 650; letter-spacing: 0.01em; }
+.sdverdict.win { color: var(--accent); }
+.sdverdict.loss { color: var(--villain); }
+.sdverdict.tie { color: var(--text); }
+/* sits in an .eqhalf row where a bar normally goes, so the HIGH/LOW tags
+   line up with the ones the equity view uses */
+.sdwho { font-size: 0.92rem; font-weight: 600; }
+.sdwho.win { color: var(--accent); }
+.sdwho.loss { color: var(--villain); }
+.sdwho.tie { color: var(--text); }
+.sdwho.none { color: var(--dim); font-weight: 400; font-size: 0.82rem; }
+
+.eq.verdict { letter-spacing: 0.07em; font-weight: 700; }
+.eq.verdict.win, .eq.verdict.tie { color: var(--gold); }
+/* the beaten seat recedes: same line, no weight, no emphasis */
+.eq.verdict.loss { color: var(--dim); font-weight: 400; letter-spacing: 0; }
+
+.eqhalf { display: grid; grid-template-columns: 3rem 1fr; gap: 0.7rem; align-items: center; }
+.eqhalf .tag { font-size: 0.7rem; letter-spacing: 0.1em; color: var(--dim); text-align: right; }
+.eqhalfnums { display: flex; flex-wrap: wrap; gap: 0.2rem 1rem; font-size: 0.76rem; color: var(--dim); padding-left: 3.7rem; }
+.eqhalfnums b { color: var(--text); font-weight: 600; }
+.eqhalfnums .hatch { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 0.3rem;
+  background: repeating-linear-gradient(135deg, #39415260 0 3px, #4c556880 3px 6px); }
+
+/* Three items that never reflow into each other: badge, facts, controls.
+   The facts are the only thing whose width changes — every tick rewrites
+   them — so they get their own wrapping box and the controls are pinned
+   beside it. When all three shared one wrapping row, a long ETA pushed
+   Pause and Stop onto a second line and the next tick pulled them back. */
+.eqmeta {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: baseline;
+  gap: 0.45rem 0.55rem;
+  font-size: 0.78rem;
+  color: var(--dim);
+  border-top: 1px solid var(--edge);
+  padding-top: 0.6rem;
+}
+/* separator leads the item it belongs to, so a wrap never strands a dot at
+   the end of a line */
+.eqmeta .mi + .mi::before { content: "·"; opacity: 0.45; margin-right: 0.55rem; }
+.eqctl { margin-left: auto; display: flex; gap: 0.4rem; flex: none; }
+.eqctl button {
+  font-size: 0.78rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: 6px;
+  min-height: 2rem;
+  touch-action: manipulation; /* no 300ms double-tap-zoom wait on iOS */
+}
+/* transport controls: a square each, so pause and play are interchangeable
+   without the right-aligned row shifting under the cursor */
+.eqctl button.icon {
+  position: relative;
+  width: 2rem;
+  min-width: 0;
+  padding: 0;
+  display: grid;
+  place-items: center;
+}
+.eqctl button.icon svg { width: 0.95rem; height: 0.95rem; display: block; }
+/* hit area past the glyph, bled by half the row gap so neighbours meet but
+   never overlap */
+.eqctl button.icon::after { content: ""; position: absolute; inset: -6px -3px; }
+/* the page's one primary action: Compute in the results panel. There is
+   never more than one on screen. */
+button.go { background: var(--accent); border-color: var(--accent); color: #0b1017; font-weight: 600; }
+button.go:hover:not(:disabled) { background: #6db4ff; border-color: #6db4ff; }
+.eqbadge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-radius: 4px;
+  padding: 0.1rem 0.45rem;
+}
+/* enumerating and exact are one blue: the badge under way and the badge it
+   settles into */
+.eqbadge.exact,
+.eqbadge.run   { color: var(--accent); border: 1px solid rgba(77,163,255,0.45); }
+.eqbadge.warn  { color: var(--warn); border: 1px solid rgba(224,162,92,0.45); }
+.eqbadge.idle  { color: var(--dim); border: 1px solid var(--edge); }
+
+.eqnote { font-size: 0.76rem; color: var(--dim); margin-top: -0.35rem; }
+.eqlead { font-size: 0.9rem; color: var(--text); }
+.eqlead b { font-size: 1.15rem; font-weight: 600; }
+.eqlead .sz { color: var(--dim); font-size: 0.8rem; }
+
+/* ---- phone: the felt loses its ellipse (a 2:1 oval wastes the width a
+   narrow screen doesn't have) and everything tightens up ---- */
+@media (max-width: 700px) {
+  :root { --pad: 0.7rem; } /* one gutter, so every band narrows together */
+  header { padding-block: 0.7rem 0.3rem; }
+  #controls { padding-block: 0.3rem; }
+  #table { border-radius: 22px; border-width: 6px; padding: 0.8rem 0.6rem; gap: 0.45rem; }
+  /* a hair taller for thumbs; the ::after does the rest, so the type itself
+     stays legend-sized */
+  .felt-btn { min-height: 1.85rem; }
+  /* Controls take their own row here. Beside the facts they left them ~110px
+     to wrap in, and the line count then changed with every tick — the buttons
+     held still but the panel breathed 80px. Badge and controls share a row
+     whose height is fixed by the buttons, so they stay put; the facts get the
+     full width underneath. */
+  .eqmeta {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-areas: "badge ctl" "facts facts";
+    align-items: center;
+  }
+  #eqBadge { grid-area: badge; }
+  #eqCtl { grid-area: ctl; justify-self: end; gap: 0.55rem; }
+  #eqFacts { grid-area: facts; }
+  /* the controls have a row to themselves here, so spend it on the target */
+  .eqctl button.icon { width: 2.4rem; min-height: 2.4rem; }
+  .eqctl button.icon svg { width: 1.1rem; height: 1.1rem; }
+  #hint { margin-top: 0.5rem; font-size: 0.74rem; }
+  #eqPanel { padding: 0.75rem 0.8rem; }
+  .eqcells { gap: 0.5rem; }
+  .eqcell .pct { font-size: 1rem; }
+  .eqhalf { grid-template-columns: 2.4rem 1fr; gap: 0.5rem; }
+  .eqhalfnums { padding-left: 0; gap: 0.2rem 0.8rem; }
+}

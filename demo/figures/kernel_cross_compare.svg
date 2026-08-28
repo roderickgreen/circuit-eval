@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 482" role="img"
+     aria-label="Cross-compare kernel: one workgroup owns one board and hero-tile cell, evaluates every hand once into shared memory, then spends the hero times villain cross product on compares"
+     font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">
+  <title>Cross-compare kernel (equity_holdem_xc.wgsl)</title>
+  <defs>
+    <marker id="arrC" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L8 4 L0 8 z" fill="#2b3038"/>
+    </marker>
+  </defs>
+  <rect width="780" height="482" fill="#ffffff"/>
+
+  <!-- header -->
+  <text x="16" y="30" fill="#2b3038"><tspan font-size="15" font-weight="600">Cross-compare kernel</tspan><tspan dx="10" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11" fill="#69727f">equity_holdem_xc.wgsl</tspan></text>
+  <text x="16" y="48" font-size="11.5" fill="#69727f">both hands part-unknown -- one workgroup owns one (board, hero-tile) cell; each hand is evaluated once</text>
+  <text x="764" y="30" text-anchor="end" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10" fill="#69727f">grid: one workgroup per (board x hero-tile) cell</text>
+
+  <!-- storage buffers -->
+  <text x="16" y="78" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11.5" fill="#2b3038">boards[]</text>
+  <g fill="#f2f4f7" stroke="#a5adb8" stroke-width="1">
+    <rect x="16" y="84" width="110" height="9"/>
+    <rect x="16" y="96" width="110" height="9"/>
+    <rect x="16" y="108" width="110" height="9"/>
+    <rect x="16" y="120" width="110" height="9"/>
+  </g>
+  <text x="71" y="143" text-anchor="middle" font-size="9.5" fill="#69727f">1 board / cell</text>
+
+  <text x="16" y="162" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11.5" fill="#2b3038">heroes[]</text>
+  <g fill="#dce9f6" stroke="#4a7ab0" stroke-width="1">
+    <rect x="16" y="168" width="110" height="9"/>
+    <rect x="16" y="180" width="110" height="9"/>
+    <rect x="16" y="192" width="110" height="9"/>
+    <rect x="16" y="204" width="110" height="9"/>
+  </g>
+  <text x="71" y="227" text-anchor="middle" font-size="9.5" fill="#69727f">tile of 512 / cell</text>
+
+  <text x="16" y="246" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11.5" fill="#2b3038">villains[]</text>
+  <g fill="#f6e3d7" stroke="#b06239" stroke-width="1">
+    <rect x="16" y="252" width="110" height="9"/>
+    <rect x="16" y="264" width="110" height="9"/>
+    <rect x="16" y="276" width="110" height="9"/>
+    <rect x="16" y="288" width="110" height="9"/>
+  </g>
+  <text x="71" y="311" text-anchor="middle" font-size="9.5" fill="#69727f">1,024 / pass</text>
+
+  <!-- workgroup frame -->
+  <rect x="150" y="62" width="614" height="330" rx="10" fill="none" stroke="#98a1ad" stroke-width="1.2" stroke-dasharray="6 4"/>
+  <text x="162" y="82" font-size="10" font-weight="600" letter-spacing="0.06em" fill="#69727f">ONE WORKGROUP (64 THREADS)</text>
+  <path d="M126 106 H146" fill="none" stroke="#2b3038" stroke-width="1.3" marker-end="url(#arrC)"/>
+
+  <!-- shared memory column -->
+  <rect x="600" y="92" width="148" height="286" rx="8" fill="#eee9f8" stroke="#7a68b3" stroke-width="1.2"/>
+  <text x="674" y="110" text-anchor="middle" font-size="9.5" font-weight="600" letter-spacing="0.06em" fill="#6a5aa0">SHARED MEMORY</text>
+  <rect x="612" y="124" width="124" height="44" rx="5" fill="#ffffff" stroke="#7a68b3" stroke-width="1"/>
+  <text x="674" y="142" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10.5" fill="#2b3038">sh_hcode[512]</text>
+  <text x="674" y="157" text-anchor="middle" font-size="9" fill="#69727f">hero 24-bit codes</text>
+  <rect x="612" y="196" width="124" height="44" rx="5" fill="#ffffff" stroke="#7a68b3" stroke-width="1"/>
+  <text x="674" y="214" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10.5" fill="#2b3038">sh_y[768]</text>
+  <text x="674" y="229" text-anchor="middle" font-size="9" fill="#69727f">value planes x 32 groups</text>
+  <rect x="612" y="252" width="124" height="44" rx="5" fill="#ffffff" stroke="#7a68b3" stroke-width="1"/>
+  <text x="674" y="270" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10.5" fill="#2b3038">sh_card[1664]</text>
+  <text x="674" y="285" text-anchor="middle" font-size="9" fill="#69727f">card planes x 32 groups</text>
+
+  <!-- phase 1: hero tile eval -->
+  <text x="166" y="106" fill="#2b3038"><tspan font-size="10.5" font-weight="600">1 - HERO TILE EVAL</tspan><tspan dx="6" font-size="9.5" fill="#69727f">threads 0..15, once per cell</tspan></text>
+  <path d="M126 190 H146 V134 H162" fill="none" stroke="#2b3038" stroke-width="1.3" marker-end="url(#arrC)"/>
+  <rect x="166" y="114" width="150" height="40" rx="6" fill="#dce9f6" stroke="#4a7ab0" stroke-width="1"/>
+  <text x="241" y="130" text-anchor="middle" font-size="11" fill="#2b3038">512 hero draws</text>
+  <text x="241" y="144" text-anchor="middle" font-size="9" fill="#69727f">16 groups x 32 lanes</text>
+  <path d="M316 134 H342" fill="none" stroke="#2b3038" stroke-width="1.3" marker-end="url(#arrC)"/>
+  <rect x="346" y="114" width="150" height="40" rx="6" fill="#fdeecb" stroke="#c9992e" stroke-width="1.6"/>
+  <text x="421" y="130" text-anchor="middle" font-size="11" font-weight="600" fill="#2b3038">hand-rank circuit</text>
+  <text x="421" y="144" text-anchor="middle" font-size="9" fill="#69727f">16 bitsliced evals</text>
+  <path d="M496 134 H554 V146 H608" fill="none" stroke="#2b3038" stroke-width="1.3" marker-end="url(#arrC)"/>
+  <text x="500" y="128" font-size="9" fill="#69727f">pack codes</text>
+
+  <!-- villain tile loop -->
+  <rect x="160" y="172" width="420" height="200" rx="8" fill="#fafbfd" stroke="#a5adb8" stroke-width="1"/>
+  <text x="172" y="190" font-size="10" font-weight="600" letter-spacing="0.06em" fill="#69727f">LOOP: VILLAIN TILES OF 1,024 DRAWS</text>
+  <path d="M556 180 A9 9 0 1 0 565 189" fill="none" stroke="#69727f" stroke-width="1.2" marker-end="url(#arrC)"/>
+
+  <!-- phase 2: stage villains -->
+  <text x="172" y="210" fill="#2b3038"><tspan font-size="10.5" font-weight="600">2 - STAGE VILLAIN TILE</tspan><tspan dx="6" font-size="9.5" fill="#69727f">threads 0..31</tspan></text>
+  <path d="M126 272 H146 V238 H168" fill="none" stroke="#2b3038" stroke-width="1.3" marker-end="url(#arrC)"/>
+  <rect x="172" y="218" width="150" height="40" rx="6" fill="#f6e3d7" stroke="#b06239" stroke-width="1"/>
+  <text x="247" y="234" text-anchor="middle" font-size="11" fill="#2b3038">1,024 villain draws</text>
+  <text x="247" y="248" text-anchor="middle" font-size="9" fill="#69727f">32 groups x 32 lanes</text>
+  <path d="M322 238 H348" fill="none" stroke="#2b3038" stroke-width="1.3" marker-end="url(#arrC)"/>
+  <rect x="352" y="218" width="150" height="40" rx="6" fill="#fdeecb" stroke="#c9992e" stroke-width="1.6"/>
+  <text x="427" y="234" text-anchor="middle" font-size="11" font-weight="600" fill="#2b3038">hand-rank circuit</text>
+  <text x="427" y="248" text-anchor="middle" font-size="9" fill="#69727f">32 bitsliced evals</text>
+  <path d="M502 238 H560 V218 H608" fill="none" stroke="#2b3038" stroke-width="1.3" marker-end="url(#arrC)"/>
+  <path d="M560 238 V274 H608" fill="none" stroke="#2b3038" stroke-width="1.3" marker-end="url(#arrC)"/>
+  <text x="584" y="212" font-size="9" fill="#69727f">write</text>
+
+  <!-- barrier -->
+  <line x1="172" y1="270" x2="568" y2="270" stroke="#69727f" stroke-width="1" stroke-dasharray="3 3"/>
+  <text x="370" y="264" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9" fill="#69727f">workgroupBarrier</text>
+
+  <!-- phase 3: cross-compare -->
+  <text x="172" y="288" fill="#2b3038"><tspan font-size="10.5" font-weight="600">3 - CROSS-COMPARE</tspan><tspan dx="6" font-size="9.5" fill="#69727f">all 64 threads, strided over heroes</tspan></text>
+  <rect x="172" y="294" width="340" height="68" rx="6" fill="#f2f4f7" stroke="#a5adb8" stroke-width="1"/>
+  <text x="342" y="312" text-anchor="middle" font-size="10.5" fill="#2b3038">each of 512 hero codes vs 1,024 villain lanes</text>
+  <text x="342" y="328" text-anchor="middle" font-size="9.5" fill="#69727f">scalar hval vs sh_y planes -- 24-step compare</text>
+  <text x="342" y="344" text-anchor="middle" font-size="9.5" fill="#69727f">sh_card collision knockout, popcount w / t / b</text>
+
+  <!-- tally -->
+  <path d="M342 362 V385 H674 V406" fill="none" stroke="#2b3038" stroke-width="1.3" marker-end="url(#arrC)"/>
+  <text x="680" y="400" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9" fill="#69727f">atomicAdd</text>
+  <rect x="600" y="410" width="148" height="40" rx="6" fill="#e6efe6" stroke="#5d8462" stroke-width="1.2"/>
+  <text x="674" y="427" text-anchor="middle" font-size="10.5" font-weight="600" fill="#2b3038">tally: win / tie / deals</text>
+  <text x="674" y="441" text-anchor="middle" font-size="9" fill="#69727f">after all tiles</text>
+
+  <!-- takeaway -->
+  <text x="16" y="460" font-size="11.5" fill="#2b3038">16 evals cover the 512-hero tile, 32 more per villain tile -- then 524,288 pairings per tile cost only compares.</text>
+  <text x="16" y="476" font-size="10.5" fill="#69727f">route for both-hands-unknown spots, where the fused kernels would re-run the circuit per pairing (35-318x on llvmpipe).</text>
+</svg>

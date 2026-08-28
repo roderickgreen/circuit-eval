@@ -1,0 +1,19 @@
+[submodule "third-party/abc"]
+	path = third-party/abc
+	url = https://github.com/berkeley-abc/abc.git
+	ignore = dirty
+[submodule "third-party/OMPEval"]
+	path = third-party/OMPEval
+	url = https://github.com/zekyll/OMPEval
+[submodule "third-party/PokerHandEvaluator"]
+	path = third-party/PokerHandEvaluator
+	url = https://github.com/HenryRLee/PokerHandEvaluator
+[submodule "third-party/benchmark"]
+	path = third-party/benchmark
+	url = https://github.com/google/benchmark.git
+[submodule "third-party/TwoPlusTwoHandEvaluator"]
+	path = third-party/TwoPlusTwoHandEvaluator
+	url = https://github.com/tangentforks/TwoPlusTwoHandEvaluator
+[submodule "third-party/yosys"]
+	path = third-party/yosys
+	url = https://github.com/YosysHQ/yosys.git

@@ -1,0 +1,75 @@
+.model artifacts/vspec/cmp8_io
+.inputs a0 a1 a2 a3 a4 a5 a6 a7 b0 b1 b2 b3 b4 \
+ b5 b6 b7
+.outputs gt eq
+.names new_n21 new_n45 gt
+01 0
+.names new_n37 new_n22 new_n21
+01 1
+.names new_n23 new_n30 new_n22
+01 1
+.names new_n27 new_n24 new_n23
+01 1
+.names new_n25 new_n26 new_n24
+00 1
+.names b3 a3 new_n25
+01 1
+.names b4 a4 new_n26
+01 1
+.names new_n28 new_n29 new_n27
+00 1
+.names a2 b2 new_n28
+01 1
+.names a3 b3 new_n29
+01 1
+.names new_n31 new_n34 new_n30
+11 1
+.names new_n32 new_n33 new_n31
+00 1
+.names a4 b4 new_n32
+01 1
+.names a5 b5 new_n33
+01 1
+.names new_n35 new_n36 new_n34
+00 1
+.names a7 b7 new_n35
+01 1
+.names a6 b6 new_n36
+01 1
+.names new_n38 new_n24 new_n37
+11 1
+.names new_n39 new_n42 new_n38
+01 1
+.names new_n40 new_n41 new_n39
+01 1
+.names a1 b1 new_n40
+01 1
+.names b0 a0 new_n41
+01 1
+.names new_n43 new_n44 new_n42
+00 1
+.names b1 a1 new_n43
+01 1
+.names b2 a2 new_n44
+01 1
+.names new_n46 new_n50 new_n45
+00 1
+.names new_n47 new_n34 new_n46
+01 1
+.names new_n48 new_n49 new_n47
+00 1
+.names b5 a5 new_n48
+01 1
+.names b6 a6 new_n49
+01 1
+.names b7 a7 new_n50
+01 1
+.names gt new_n52 eq
+01 1
+.names new_n40 new_n53 new_n52
+01 1
+.names new_n54 new_n22 new_n53
+01 1
+.names a0 b0 new_n54
+01 1
+.end
