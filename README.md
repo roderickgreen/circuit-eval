@@ -7,8 +7,8 @@ random deals run as fast as sequential ones.
 
 ## References
 
-[Blog post](https://roderickgreen.com/fast-poker-hand-eval)\
-[WebGPU Demo](https://roderickgreen.com/demos/circuit-equity)
+[Blog post](https://roderickgreen.com/posts/fast-poker-hand-eval/)\
+[WebGPU Demo](https://roderickgreen.com/demos/circuit-equity/)
 
 ## Expectations
 
