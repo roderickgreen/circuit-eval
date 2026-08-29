@@ -30,7 +30,12 @@ build/verify_omaha_hilo -k 4 -p 0:200 # both sides in one sweep, same stamps
 build/verify_omaha -k 4               # the whole domain: 4.6e11 configs, ~3.5 min
 build/pheoracle_omaha -k 4 -p 0:200   # circuit-free stamp from PHE + the encoding:
                                       # must equal verify_omaha's line for the slice
+build/verify_omaha_hilo -k 4 -b 3     # 3-card boards (a flop), whole domain, both sides
+build/verify_omaha_hilo -k 4 -b 4     # 4-card boards (a turn)
 ```
+
+`-b` (3, 4 or 5, default 5) is the board size on the three omaha gates;
+each board size is its own domain with its own stamps.
 
 Each compiled gate prints `0 mismatches -- PASS` and exits 0, or names
 the failure and exits 1.  The final line of every run is a stamp pair:
@@ -39,10 +44,11 @@ the failure and exits 1.  The final line of every run is a stamp pair:
 must print the same pair, and a `-p first:last` slice is checkable on
 its own.  Both stamps are sums mod 2^64 of one term per configuration,
 so disjoint slices recombine into the full domain: their `domain` stamps
-must sum to the constant for that k (`build/domain_omaha -k K`), then
-their `stamp` values sum to the full-domain stamp (`-d` prints just the
-domain stamp).  The full omaha sweeps at 5 and 6 hole cards run for
-hours; `-p` slices give the same evidence per configuration in seconds.
+must sum to the constant for that k and b (`build/domain_omaha -k K
+-b B`, or any gate's `-d`), then their `stamp` values sum to the
+full-domain stamp.  The full omaha sweeps at 5 and 6
+hole cards run for hours; `-p` slices give the same evidence per
+configuration in seconds.
 
 ## Published stamps
 
@@ -65,6 +71,27 @@ the same pair.
 | k 6 | 27,906,522,724,080 | `3a03655bd1cf8774` | `07465ff789a64301` | `4dadbe86d7f4cb80` |
 | k 7 | 163,452,490,241,040 | | | `bf51ca0ef564be29` |
 | k 8 | 817,262,451,205,200 | | | `3dc6e0ada922b323` |
+
+| omaha `-k K -b B` | configurations C(52,k) x C(52-k,b) | high stamp | low stamp | domain |
+|---|---:|---|---|---|
+| k 2 b 3 | 25,989,600 | `68b88269a8129863` | `82441d4ae4073be3` | `f9edbb4900a7fe23` |
+| k 2 b 4 | 305,377,800 | `e639f80cadb233ab` | `083699abe4826a09` | `3208594f9904c699` |
+| k 3 b 3 | 407,170,400 | `f6714880abf93850` | `26fe1e79c7e4e299` | `a643fd71a3b6e65d` |
+| k 3 b 4 | 4,682,459,600 | `d66f53390eae981b` | `5482295316046d68` | `909209ae060dcd3d` |
+| k 4 b 3 | 4,682,459,600 | `c6596d2940eb97f7` | `9f71a96897b2e432` | `be6f49d57b5e0299` |
+| k 4 b 4 | 52,677,670,500 | `2c228cb4fc776711` | `afab955606962d36` | `045ea6cc21dbfec6` |
+| k 5 b 3 | 42,142,136,400 | `9bd04504eea919ac` | `2a06c0bf7aad0690` | `9da941bd1c86d9ae` |
+| k 5 b 4 | 463,563,500,400 | `efa9085d97db847e` | `170c4fa6f3ab1d93` | `4716931110132610` |
+| k 6 b 3 | 309,042,333,600 | `f9e640cea7af4f55` | `89f8f4ad9f68e49b` | `39607d97158fe565` |
+| k 6 b 4 | 3,322,205,086,200 | `dacc8a469fcf3437` | `136676bd77bd0de3` | `d2f956d7e42e6cb1` |
+
+The 3- and 4-card board rows (a flop, a turn) come from
+`verify_omaha_hilo -k K -b B`; `verify_omaha -b` and `verify_omaha_lo -b`
+print the same stamps per side.  They are held to the anchored 5-card
+primitive and the rules-only low the same way the 5-card board rows
+are; `pheoracle_omaha` takes 5-card boards only, so the circuit-free
+stamp exists for the b 5 rows alone.  Every row above through k 6 b 4
+ran on one 32-thread machine, the largest in about an hour.
 
 `verify_omaha_hilo` prints both value stamps and the shared domain on
 one line; each equals what the matching single-side gate prints for the
@@ -94,7 +121,9 @@ reduced-domain tables `artifacts/mkartifacts.py` writes.
 ### `omaha/` -- the omaha circuits
 
 `verify_omaha.c` holds the library to the anchored 5-card values over
-every configuration per hole count.  `pheoracle_omaha.c` is the
+every configuration per hole count and board size (`-b 3`, `4`, `5`:
+the expected value is the max over the board's C(b,3) triples).
+`pheoracle_omaha.c` is the
 circuit-free counterpart at 4-6 hole cards: PHE's omaha evaluators
 aligned to the encoding the way `omporacle5` aligns OMPEval, printing
 the same stamp line.  `verify_omaha_lo.c` does the same for the low
@@ -103,8 +132,11 @@ against an in-process rules-only reference.
 enumeration and tests `circuit_eval_omaha_hilo`, which runs the two
 circuits off one input transpose; it validates both sides for about 17%
 less than the two single-side sweeps cost separately.
-`verify_omaha.py` / `verify_low.py` are the sampled netlist checks
-against the structural prototype `omaha_proto.py`.  `compose_low.py`
+`omaha_sweep.h` is the scaffolding the three gates and `domain_omaha.c` share:
+the card tables, colex hole-set indexing, the stamp primitive, the
+command line, and the thread pool; it reads no evaluator and no
+reference.  `verify_omaha.py` / `verify_low.py` are the sampled netlist
+checks against the structural prototype `omaha_proto.py`.  `compose_low.py`
 composes the low core onto the 104 card planes.
 
 ### `spec/` -- netlist-level checks

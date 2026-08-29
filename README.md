@@ -98,9 +98,10 @@ produces a meaningful one.
 Anything else yields a well-formed but meaningless value, not an error
 or a sentinel. Any required validation must be done upstream.
 
-The omaha circuits work for any hole count of 2 or more. They are
-verified exhaustively for 2 through 6 hole cards
-(`verify/build/verify_omaha -k K`, see `verify/README.md`).
+The omaha circuits work for any hole count of 2 or more and any board
+of 3 to 5 cards. They are verified exhaustively for 2 through 6 hole
+cards on 3-, 4- and 5-card boards (`verify/build/verify_omaha -k K -b B`,
+see `verify/README.md`).
 
 ## The evaluators
 

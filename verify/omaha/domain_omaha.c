@@ -7,8 +7,9 @@
  *            fmix64(fmix64(hole_mask) ^ board_mask)  mod 2^64
  *
  * where hole ranges over the C(52,k) hole sets and board over the
- * C(52-k,5) boards from the remaining cards.  The stamp is a constant
- * of the domain at k, independent of any evaluator, and it is the
+ * C(52-k,b) boards from the remaining cards, b = 5 by default or 3 or
+ * 4 with -b (the verify gates' -b).  The stamp is a constant of the
+ * domain at (k, b), independent of any evaluator, and it is the
  * gate for recombining partial validation runs: slice value stamps are
  * accepted only after the slice domain stamps sum to this constant.
  * That makes the constant worth publishing even for hole counts whose
@@ -27,7 +28,8 @@
  * vector tails are kept out of the sum by masking, and the per-thread
  * accumulator stays in vector registers for a whole hole set.
  *
- * Configuration counts per hole count (hole sets x boards):
+ * Configuration counts per hole count at 5-card boards (hole sets x
+ * boards); 4- and 3-card boards are about 9x and 100x fewer:
  *
  *   k    configurations    k    configurations
  *   2    2.8e9             6    2.8e13
@@ -40,71 +42,23 @@
  * against) slices from the validator: disjoint slice domains sum to
  * the full-domain constant.
  *
- * usage: domain_omaha -k holes [-t threads] [-p first[:last]]
+ * usage: domain_omaha -k holes [-b board] [-t threads] [-p first[:last]]
  *   -k   hole cards, 2..8
+ *   -b   board cards, 3..5 (default 5)
  *   -t   worker threads (default: online CPUs)
  *   -p   hole-set index range, for partial runs (default: whole domain)
  *
  * Output ends with the same line the validator prints:
  *
- *   domain <16 hex digits> (k <k>, sets <first>:<last>)
+ *   domain <16 hex digits> (k <k> b <b>, sets <first>:<last>)
  */
-#include <pthread.h>
-#include <stdatomic.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include <unistd.h>
+#include "omaha_sweep.h"
 
 #if defined(__AVX512DQ__) || defined(__AVX2__)
 #include <immintrin.h>
 #endif
 
-#define KMAX 8
-#define RMPAD 8                 /* zero padding: safe tail overreads */
-
-static uint64_t binom[53][KMAX + 1];
-static int khole;
-static long long nboards;
-
-static long long last_set;
-static _Atomic long long next_set;
-static _Atomic long long sets_done;
 static _Atomic unsigned long long domain_total;
-static long long nsets_run;
-static long long print_every;
-
-static double now(void)
-{
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    return ts.tv_sec + 1e-9 * ts.tv_nsec;
-}
-
-/* murmur3 64-bit finalizer, the stamp's only primitive */
-static inline uint64_t fmix64(uint64_t x)
-{
-    x ^= x >> 33;
-    x *= 0xff51afd7ed558ccdull;
-    x ^= x >> 33;
-    x *= 0xc4ceb9fe1a85ec53ull;
-    x ^= x >> 33;
-    return x;
-}
-
-/* colex unrank: the r-th k-subset of 0..51, ascending into out[] */
-static void unrank(long long r, int k, int *out)
-{
-    for (int j = k; j >= 1; j--) {
-        int v = j - 1;
-        while (binom[v + 1][j] <= (uint64_t)r)
-            v++;
-        out[j - 1] = v;
-        r -= binom[v][j];
-    }
-}
 
 /* One backend per ISA level, picked at compile time.  Each provides:
  *   acc_t            per-thread accumulator, vector-resident
@@ -270,34 +224,30 @@ static inline uint64_t acc_fold(const acc_t *a)
 static void *worker(void *arg)
 {
     (void)arg;
-    for (;;) {
-        long long si = atomic_fetch_add(&next_set, 1);
-        if (si > last_set)
-            break;
-
+    for (long long si; (si = take_set()) >= 0;) {
         int hc[KMAX];
-        unrank(si, khole, hc);
-        uint64_t hm = 0;
-        for (int i = 0; i < khole; i++)
-            hm |= 1ull << hc[i];
+        uint64_t hm, rm[52 + RMPAD];
+        int nr = hole_set(si, hc, &hm, rm, NULL);
         uint64_t hh = fmix64(hm);
 
-        int nr = 0;
-        uint64_t rm[52 + RMPAD];
-        for (int c = 0; c < 52; c++)
-            if (!(hm >> c & 1))
-                rm[nr++] = 1ull << c;
-        for (int i = nr; i < nr + RMPAD; i++)
-            rm[i] = 0;
-
+        /* the last board card is the vectorized run; the shorter
+         * boards start that run one or two levels up */
         acc_t acc;
         acc_zero(&acc);
-        for (int a = 0; a < nr - 4; a++) {
+        for (int a = 0; a < nr - nboard + 1; a++) {
             uint64_t x1 = hh ^ rm[a];
-            for (int b = a + 1; b < nr - 3; b++) {
+            for (int b = a + 1; b < nr - nboard + 2; b++) {
                 uint64_t x2 = x1 ^ rm[b];
-                for (int c = b + 1; c < nr - 2; c++) {
+                if (nboard == 3) {
+                    run_sum(&acc, x2, rm + b + 1, nr - b - 1);
+                    continue;
+                }
+                for (int c = b + 1; c < nr - nboard + 3; c++) {
                     uint64_t x3 = x2 ^ rm[c];
+                    if (nboard == 4) {
+                        run_sum(&acc, x3, rm + c + 1, nr - c - 1);
+                        continue;
+                    }
                     for (int d = c + 1; d < nr - 1; d++)
                         run_sum(&acc, x3 ^ rm[d], rm + d + 1,
                                 nr - d - 1);
@@ -305,91 +255,29 @@ static void *worker(void *arg)
             }
         }
         atomic_fetch_add(&domain_total, acc_fold(&acc));
-
-        long long done = atomic_fetch_add(&sets_done, 1) + 1;
-        if (done % print_every == 0 || done == nsets_run)
-            fprintf(stderr, "\r  %lld/%lld hole sets", done, nsets_run);
+        finish_set();
     }
     return NULL;
 }
 
 int main(int argc, char **argv)
 {
-    int nthreads = (int)sysconf(_SC_NPROCESSORS_ONLN);
-    long long first = 0;
-    last_set = -1;
-    khole = 0;
-
-    int opt;
-    while ((opt = getopt(argc, argv, "k:t:p:")) != -1) {
-        switch (opt) {
-        case 'k':
-            khole = atoi(optarg);
-            break;
-        case 't':
-            nthreads = atoi(optarg);
-            break;
-        case 'p': {
-            char *colon = strchr(optarg, ':');
-            first = atoll(optarg);
-            last_set = colon ? atoll(colon + 1) : first;
-            break;
-        }
-        default:
-            goto usage;
-        }
-    }
-    if (khole < 2 || khole > KMAX || nthreads < 1) {
-    usage:
-        fprintf(stderr,
-                "usage: domain_omaha -k holes(2..%d) [-t threads] "
-                "[-p first[:last]]\n", KMAX);
-        return 2;
-    }
-
-    for (int n = 0; n <= 52; n++) {
-        binom[n][0] = 1;
-        for (int j = 1; j <= KMAX; j++)
-            binom[n][j] = n ? binom[n - 1][j - 1] + binom[n - 1][j] : 0;
-    }
-
-    long long nsets = (long long)binom[52][khole];
-    int r = 52 - khole;
-    nboards = (long long)r * (r - 1) * (r - 2) * (r - 3) * (r - 4) / 120;
-
-    if (last_set < 0)
-        last_set = nsets - 1;
-    if (first < 0 || last_set >= nsets || first > last_set) {
-        fprintf(stderr, "domain_omaha: bad -p range (0..%lld)\n",
-                nsets - 1);
-        return 2;
-    }
-    next_set = first;
-    nsets_run = last_set - first + 1;
-    print_every = nsets_run / 500 ? nsets_run / 500 : 1;
+    int rc = parse_args(argc, argv, "domain_omaha", 0);
+    if (rc)
+        return rc;
     printf("domain_omaha: omaha%d domain constant, "
-           "%lld hole sets x %lld boards = %.4g configs, "
+           "%lld hole sets x %lld %d-card boards = %.4g configs, "
            "%d threads (%s)\n",
-           khole, nsets_run, nboards,
+           khole, nsets_run, nboards, nboard,
            (double)nsets_run * nboards, nthreads, BACKEND);
 
-    double t0 = now();
-    pthread_t *tid = malloc(nthreads * sizeof *tid);
-    if (!tid) {
-        fprintf(stderr, "domain_omaha: out of memory\n");
-        return 2;
-    }
-    for (int t = 0; t < nthreads; t++)
-        pthread_create(&tid[t], NULL, worker, NULL);
-    for (int t = 0; t < nthreads; t++)
-        pthread_join(tid[t], NULL);
-    double dt = now() - t0;
-    fprintf(stderr, "\n");
+    double dt = run_workers(worker, "domain_omaha");
 
     double nconf = (double)nsets_run * nboards;
     printf("%.0f configs in %.1f s (%.1f M/s), domain-only\n",
            nconf, dt, nconf / dt / 1e6);
-    printf("domain %016llx (k %d, sets %lld:%lld)\n",
-           (unsigned long long)domain_total, khole, first, last_set);
+    printf("domain %016llx (k %d b %d, sets %lld:%lld)\n",
+           (unsigned long long)domain_total, khole, nboard,
+           first_set, last_set);
     return 0;
 }

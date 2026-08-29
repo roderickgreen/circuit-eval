@@ -36,8 +36,8 @@
  * put however many hole cards in the hole mask.  The value is the maximum
  * over every two-hole/three-board split, so any board of 3 or more cards
  * is defined and a flop or turn evaluates the current best hand.  The
- * exhaustive verification in verify/ covers 5-card boards only; shorter
- * boards follow from the same circuit but have no shipped exhaustive gate.
+ * exhaustive verification in verify/ covers 3-, 4- and 5-card boards at
+ * 2..6 hole cards.  Boards of fewer than 3 cards have no defined value.
  */
 #pragma once
 #include <stdint.h>
@@ -119,7 +119,7 @@ static const int CIRCUIT_NUM_RANKS[10] = {0, 5, 4, 3, 3, 1, 5, 2, 2, 1};
 /* holdem: 7-card hands (any 5 of 7), 24-bit high value */
 void circuit_eval_holdem(const uint64_t hands[BS_BATCH], uint32_t vals[BS_BATCH]);
 
-/* omaha high: exactly 2 of 4/5/6 hole cards + exactly 3 of 5 board cards */
+/* omaha high: exactly 2 of 4/5/6 hole cards + exactly 3 of 3..5 board cards */
 void circuit_eval_omaha(const uint64_t hole[BS_BATCH], const uint64_t board[BS_BATCH],
                         uint32_t vals[BS_BATCH]);
 

@@ -111,12 +111,12 @@ $(B)/omporacle5: $(H)/omporacle5.cpp $(H)/valmap.h $(OMP)/omp/HandEvaluator.cpp 
 # the deployed library held to the anchored 5-card values over every
 # configuration per hole count (see omaha/verify_omaha.c); the same
 # rule builds verify_omaha_lo and the merged verify_omaha_hilo
-$(B)/verify_%: $(O)/verify_%.c $(LIB)/build/libcircuiteval.a | $(B)
+$(B)/verify_%: $(O)/verify_%.c $(O)/omaha_sweep.h $(LIB)/build/libcircuiteval.a | $(B)
 	$(CC) -O2 -march=native -Wall -I$(INC) -pthread -o $@ \
 	    $< $(LIB)/build/libcircuiteval.a
 
 # domain constants only: no evaluator, so no circuit library
-$(B)/domain_omaha: $(O)/domain_omaha.c | $(B)
+$(B)/domain_omaha: $(O)/domain_omaha.c $(O)/omaha_sweep.h | $(B)
 	$(CC) -O2 -march=native -Wall -pthread -o $@ $<
 
 # the standalone omaha stamp oracle: PHE's plo4/5/6 evaluators + the
